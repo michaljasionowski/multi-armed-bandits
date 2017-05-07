@@ -36,18 +36,21 @@
   
   
 (defn gaussian-inference
-  "Performs inference after 'datum' has been measured assuming prior distribution N('old-miu', 'old-variance') and gaussian likelihood.
-  Returns pair ['new-miu' 'new-variance'] describing posterior distribution."
-  [old-miu old-variance datum likelihood-variance]
+  "Performs inference after 'datum' has been measured assuming prior distribution N('old-miu', 'old-std-dev'^2) and gaussian likelihood.
+  Returns pair ['new-miu' 'new-std-dev'] describing posterior distribution."
+  [old-miu old-std-dev datum likelihood-std-dev]
   (let
-    [new-miu (-> (* old-miu likelihood-variance)
+    [old-variance (* old-std-dev old-std-dev)
+     likelihood-variance (* likelihood-std-dev likelihood-std-dev)
+     new-miu (-> (* old-miu likelihood-variance)
                  (+ (* datum old-variance))
                  (/ (+ old-variance likelihood-variance)))
      
-     new-variance (-> (* old-variance likelihood-variance)
-                      (/ (+ old-variance likelihood-variance)))]
+     new-std-dev (-> (* old-variance likelihood-variance)
+                     (/ (+ old-variance likelihood-variance))
+                     (Math/sqrt))]
     
-    [new-miu new-variance])
+    [new-miu new-std-dev])
 )
 
 (defn draw-bandit-once-more
