@@ -13,8 +13,7 @@
          y (rand)
          r (-> x (Math/log) (* -2) (Math/sqrt))]
     (reset! next-rand-gauss (-> (* 2 Math/PI y) (Math/sin) (* r)))
-    (-> (* 2 Math/PI y) (Math/cos) (* r s) (+ m)))
-))
+    (-> (* 2 Math/PI y) (Math/cos) (* r s) (+ m)))))
 
 (defn generate-bandits
   "Generates 'n' bandits.
@@ -22,43 +21,31 @@
   Returns sequence of pairs [mean variance=1]. Each pair describes one bandit."
   [m s n]
   (->> (fn [] [(rand-gauss m s) 1])
-       (repeatedly n))
-)
+       (repeatedly n)))
 
 (defn draw-each-bandit-once
   "Function used to perform initial probing of bandits.
   Draws each bandit once. Assumes we know the variances of the bandits.
   After initial drawing each bandit is estimated by mean equal to the drawn number and variance equal to the true variance (in case of gaussian likelihood this correspondes to gaussian prior with infinite variance)."
   [bandits drawing-function]
-  (map (fn [[miu sigma]] [(drawing-function miu sigma) sigma]) bandits)
-  )
+  (map (fn [[miu sigma]] [(drawing-function miu sigma) sigma]) bandits))
 
-  
-  
 (defn gaussian-inference
-  "Performs inference after 'datum' has been measured assuming prior distribution N('old-miu', 'old-std-dev'^2) and gaussian likelihood.
+  "Performs inference after 'reward' has been measured assuming prior distribution N('old-miu', 'old-std-dev'^2) and gaussian likelihood.
   Returns pair ['new-miu' 'new-std-dev'] describing posterior distribution."
-  [old-miu old-std-dev datum likelihood-std-dev]
+  [[old-miu old-std-dev] reward likelihood-std-dev]
   (let
     [old-variance (* old-std-dev old-std-dev)
      likelihood-variance (* likelihood-std-dev likelihood-std-dev)
      new-miu (-> (* old-miu likelihood-variance)
-                 (+ (* datum old-variance))
+                 (+ (* reward old-variance))
                  (/ (+ old-variance likelihood-variance)))
      
      new-std-dev (-> (* old-variance likelihood-variance)
                      (/ (+ old-variance likelihood-variance))
                      (Math/sqrt))]
     
-    [new-miu new-std-dev])
-)
-
-(defn draw-bandit-once-more
-  "Performs one draw from a bandit described by 'bandit' and estimated by 'observed-bandit', then makes inference and returns posterior value of 'observed-bandit'. Assumes we know the variances of the bandits."
-  [observed-bandit bandit drawing-function inference-function]
-  (let
-    [drawn-number (apply drawing-function bandit)]
-    (inference-function (first observed-bandit) (second observed-bandit) drawn-number (second bandit))))
+    [new-miu new-std-dev]))
 
 (defn choose-next-bandit
   "Returns index of the bandit with the highest value of (mean + 'factor' * standard-deviation).
@@ -69,16 +56,17 @@
         (.indexOf bandits)))
 
   ([bandits]
-    (choose-next-bandit 2 bandits))
-)
+    (choose-next-bandit 2 bandits)))
 
 (defn simulate-one-step
   "Performs one step of the simulation, i.e. draws one bandit and returns updated bandits and updated total numbers of draws from each bandit."
   [bandits drawing-function inference-function choosing-function [observed-bandits numbers-of-draws]]
   (let
     [choosen-bandit-index (choosing-function observed-bandits)
+     choosen-bandit (nth bandits choosen-bandit-index)
+     reward (apply drawing-function choosen-bandit)
      updated-numbers (update numbers-of-draws choosen-bandit-index inc)
-     updated-bandits (update observed-bandits choosen-bandit-index draw-bandit-once-more (nth bandits choosen-bandit-index) drawing-function inference-function)]
+     updated-bandits (update observed-bandits choosen-bandit-index inference-function reward (second choosen-bandit))]
    [updated-bandits updated-numbers]))
  
 (defn simulate
