@@ -1,6 +1,8 @@
 # multi-armed-bandits
 Implementation of an example algorithm solving multi-armed bandits with gaussian rewards problem.
 
+Assumes we know that each bandit has variance of rewards equal to 1.
+
 Initially each bandit is drawn once. The order of subsequent draws is determined by finding bandit with the highest value of mean reward + 3 * its standard deviation.
 
 ## Usage
